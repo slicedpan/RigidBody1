@@ -56,8 +56,6 @@ Plane * groundPlane;
 ColouredParticleSystem* particleSystem;
 Box * box;
 Box * box2;
-GravitationalForce* gravity;
-CentralForce* centralForce;
 
 // This function is called to display the scene.
 
@@ -77,19 +75,27 @@ void setup()
 		lastKeystate[i] = false;
 	}
 	glutSetCursor(GLUT_CURSOR_NONE);
-	groundPlane = new Plane(Vec3(0.0, 1.0, 0.2), Vec3(0.0, 0.0, 0.0));
+	groundPlane = new Plane(Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 0.0));
 	PhysicsSystem::GetCurrentInstance()->AddCollidable(groundPlane);
-	box = new Box(Vec3(0.0, 2.0, 10.0), Vec3(10.0, 4.0, 10.0));
-	box->Colour = Vec3(0.5, 0.0, 0.0);
 	box2 = new Box(Vec3(0.0, 6.5, 10.0), Vec3(1.0, 5.0, 5.0));
 	box2->Colour = Vec3(0.0, 0.1, 0.4);
 	PhysicsSystem::GetCurrentInstance()->AddCollidable(box);
-	PhysicsSystem::GetCurrentInstance()->AddCollidable(box2);
-	particleSystem = new ColouredParticleSystem(Vec3(0.0, 15.0, 0.0), Vec3(0.25f, 0.0, 0.0), Vec3(0.0, 0.2, 1.0), 2000, 115);
-	gravity = new GravitationalForce(Vec3(0.0f, -10.0f, 0.0f));
-	centralForce = new CentralForce(Vec3(0.0, 5.0, 10.0), 3.0f);
-	particleSystem->AddForce(gravity);
-	particleSystem->AddForce(centralForce);	
+	PhysicsSystem::GetCurrentInstance()->AddCollidable(box2);	
+
+	glEnable(GL_LIGHTING);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
+	float spec[4];
+	spec[0] = 1.0f;
+	spec[1] = 1.0f;
+	spec[2] = 1.0f;
+	spec[3] = 1.0f;
+	Vec4 amb(0.01f, 0.01f, 0.01f, 0.01f);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spec);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, amb.Ref());
+	glEnable(GL_LIGHT0);
+	Vec4 diffColour(1.0f, 0.3f, 0.3f, 1.0f);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffColour.Ref());
+
 }
 
 int lastTime = 0;
@@ -112,20 +118,18 @@ void display ()
 		frameCounter = 0;
 	}
 
-	cameraController->Update((float)elapsedTime);	
-	particleSystem->Update((float)elapsedTime);
+	cameraController->Update((float)elapsedTime);
+
+	Vec4 lightPos(0.0f, 100.0f, 10.0f, 1.0f);
 
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
+	
 	glMultMatrixf(camera->GetViewTransform().Ref()); //apply camera transform
-
-	groundPlane->Draw();
-	box->Draw();
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPos.Ref());
 	box2->Draw();
-	particleSystem->Draw();
-
+	groundPlane->Draw();
 	/*
 	//Draw model axes.
 	glBegin(GL_LINES);
@@ -176,10 +180,8 @@ void HandleInput()
 		cameraController->MoveDown();
 	}
 
-	if (keystate['g'] && !lastKeystate['g'])
-		gravity->ToggleActive();
-	if (keystate['h'] && !lastKeystate['h'])
-		centralForce->ToggleActive();
+	if (keystate['r'] && !lastKeystate['r'])
+		box2->ApplyAngularMomentum(Vec3(1.0f, 0.0f, 0.0f), 0.01f);
 
 	if (keystate[27])
 		exit(0);
@@ -209,8 +211,7 @@ void idle ()
 	s << 
 		resetiosflags(ios::floatfield) << setiosflags(ios::fixed) << 
 		setprecision(3) << "Camera pitch, yaw: " << camera->Pitch << ", " << camera->Yaw << 
-		setprecision(0) << ").  Position=" << setw(3) << camera->Position[0] << ", " << camera->Position[1] << ", " << camera->Position[2] <<
-		".  No. of particles=" << setw(3) << particleSystem->GetParticleNum() <<
+		setprecision(0) << ").  Position=" << setw(3) << camera->Position[0] << ", " << camera->Position[1] << ", " << camera->Position[2] <<		
 		setprecision(2) << ".  fps=" << fps <<
 		"." << ends;
 	glutSetWindowTitle(buffer);
@@ -220,7 +221,7 @@ void idle ()
 
 	cameraController->ChangePitch(-dMouseY);
 	cameraController->ChangeYaw(-dMouseX);
-
+	box2->Update(16);
 	glutWarpPointer(width / 2, height / 2);
 
 	glutPostRedisplay();

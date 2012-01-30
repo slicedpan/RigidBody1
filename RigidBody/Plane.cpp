@@ -31,6 +31,7 @@ Contact * Plane::GetContact(Vec3& point)
 
 void Plane::Draw()
 {
+	glDisable(GL_LIGHTING);
 	glBegin(GL_LINES);
 		glColor3f(1.0, 0.0, 0.0);
 		glVertex(position);
@@ -42,6 +43,7 @@ void Plane::Draw()
 		glVertex(position);
 		glVertex(position + normal);
 	glEnd();
+	glEnable(GL_LIGHTING);
 
 	glBegin(GL_QUADS);
 		glColor3f(0.3, 0.3, 0.3);
